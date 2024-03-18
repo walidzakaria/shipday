@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Shipping Loader</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    />
+
+    <style>
+      html,
+      body {
+        font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        width: 100%;
+        height: 100%;
+        overflow-y: hidden;
+        padding: 0;
+        margin: 0;
+      }
+      body {
+        font:
+          13px Helvetica,
+          sans-serif;
+      }
+      body > div {
+        width: 48%;
+        height: 100%;
+        overflow-y: auto;
+        display: inline-block;
+        vertical-align: top;
+      }
+      iframe {
+        border: none;
+        width: 100%;
+        height: 100%;
+      }
+      #output {
+        padding: 10px;
+        box-shadow: 0 0 5px #777;
+        border-radius: 5px;
+        margin: 10px;
+      }
+      #processor {
+        height: 70px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Shipping Loader</h1>
+    <!-- <button id="import-btn" class="btn btn-primary btn-sm">Import</button>
+    <button id="check" class="btn btn-success btn-sm">Check</button>
+    <br>
+    <div id="iframe-container"></div>
+     -->
+    <div>
+      <!-- embed the pdftotext web app as an iframe -->
+      <button id="post-test" class="btn btn-success btn-sm ml-3">Test</button>
+      <!-- <iframe id="processor" src="../"></iframe> -->
+
+      <!-- a container for the output -->
+      <div id="output">
+        <div id="intro">
+          Extracting text from a PDF file using only Javascript.<br />Tested in Chrome 16 and
+          Firefox 9.
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <!-- the PDF file must be on the same domain as this page -->
+      <iframe id="input" src="D:\\Data\\receipt-AVJBS6.pdf"></iframe>
+    </div>
+
+    <script>
+      $(document).ready(function () {
+        $('#import-btn').on('click', function () {
+          createPage()
+        })
+        $('#post-test').on('click', function () {
+          $.ajax({
+            type: 'POST',
+            url: 'https://api.shipday.com/orders',
+            headers: {
+              Authorization: 'Basic 6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9'
+            },
+            contentType: 'application/json',
+            data: {
+              orderNumber: 'AVJBS6',
+              customerName: 'lukas felbermair',
+              customerAddress: 'Leonfeldner Straße 91, 4040 Linz',
+              customerPhoneNumber: '06641803610',
+              restaurantName: 'La fiesta',
+              restaurantAddress: 'Friedensplatz 3, 4020 Linz',
+              restaurantPhoneNumber: '43 660 9217020',
+              expectedDeliveryDate: '2024-03-17',
+              expectedPickupTime: '10:52:00',
+              expectedDeliveryTime: '10:52:00',
+              totalOrderCost: 27.0,
+              deliveryInstruction: 'fast plz',
+              orderSource: 'Shipday',
+              creditCardType: 'visa'
+            },
+            success: function (response) {
+              console.log('Success! Data:', response)
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+              console.error('Error:', textStatus, errorThrown)
+            }
+          })
+        })
+        $('#check').on('click', function () {
+          //const iframe = document.getElementById("myIframe");
+          //const iframeWindow = iframe.contentWindow;
+          //iframeWindow.find('#orderNumber').val('walid');
+        })
+        // Access iframe's contentWindow
+        //var iframe = document.getElementById('myIframe');
+        //var iframeWindow = iframe.contentWindow;
+
+        // Execute jQuery function within iframe
+        //$(iframeWindow.document).ready(function() {
+        // Now you can use jQuery within the iframe
+        //   $(iframeWindow.document).find('#orderNumber').val('123');
+        //});
+      })
+      //function createPage() {
+      //  const newIframe = '<iframe src="https://dispatch.shipday.com/RestaurantOrderForm2/bLKEQcxpVH" id="myIframe"/>';
+      //  $('#iframe-container').append(newIframe);
+      //}
+    </script>
+  </body>
+</html>
