@@ -19,12 +19,21 @@
       </div>
     </div>
     {{ getSkills }}
+    <button @click="test">Shipday</button>
   </main>
 </template>
+
 
 <script>
   // import PDFJSLib from 'pdfjs-dist';
   import { useOrderStore } from '../stores/orders';
+  import Shipday from 'shipday/integration';
+  import OrderInfoRequest from 'shipday/integration/order/request/order.info.request';
+  import PaymentMethod from 'shipday/integration/order/types/payment.method';
+  // import CardType from 'shipday/integration/order/types/card.type';
+  // import OrderItem from 'shipday/integration/order/request/order.item';
+  //import pdfjsLib from 'pdfjs-dist';  
+
 
   export default {
     setup() {
@@ -47,6 +56,50 @@
       };
     },
     methods: {
+      test() {
+        const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
+        shipdayClient.carrierService.getCarriers().then(r => console.log(r[0]));
+        
+        const orderInfoRequest = new OrderInfoRequest(
+          "99qT5A",
+          "Mr. Jhon Mason",
+          "556 Crestlake Dr, San Francisco, CA 94132, USA",
+          "jhonMason@gmail.com",
+          "+14152392212",
+          "Popeyes Louisiana Kitchen",
+          "890 Geneva Ave, San Francisco, CA 94112, United States"
+        );
+
+        orderInfoRequest.setRestaurantPhoneNumber("+14152392013");
+        orderInfoRequest.setExpectedDeliveryDate("2021-06-03");
+        orderInfoRequest.setExpectedDeliveryTime("17:45:00");
+        orderInfoRequest.setExpectedPickupTime("19:22:00");
+        orderInfoRequest.setPickupLatLong(41.53867, -72.0827);
+        orderInfoRequest.setDeliveryLatLong(41.53867, -72.0827);
+        // orderInfoRequest.setTips(0);
+        // orderInfoRequest.setTax(0);
+        // orderInfoRequest.setDiscountAmount(0);
+        // orderInfoRequest.setDeliveryFee(0);
+        orderInfoRequest.setTotalOrderCost(32.47);
+        orderInfoRequest.setDeliveryInstruction("Please leave the items by the door");
+        orderInfoRequest.setOrderSource("Seamless");
+        orderInfoRequest.setAdditionalId("4532");
+        orderInfoRequest.setClientRestaurantId(12);
+
+        const paymentOption = PaymentMethod.CREDIT_CARD;
+        // const paymentOption2 = PaymentMethod.CASH;
+        // const cardType = CardType.AMEX;
+
+        orderInfoRequest.setPaymentMethod(paymentOption);
+        // orderInfoRequest.setCreditCardType(cardType);
+        shipdayClient.orderService
+          .insertOrder(orderInfoRequest)
+          .then((res) => console.log(res))
+          .catch((e) => console.log(e));
+        // shipdayClient.orderService.insertOrder(newRequest).then((r) => {
+        //   console.log(r);
+        // });
+      },
       previewPdf(event) {
         const pdfFile = event.target.files[0];
         if (pdfFile) {

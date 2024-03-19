@@ -48,9 +48,9 @@ export const useOrderStore = defineStore({
       };
       const headers = {
         'Accept': 'application/json',
-        'Authorization': 'Basic BgxsDwd00n.LNNn90QydrjgZ1K9dS13',
+        'Authorization': 'Basic 6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9',
         'Content-Type': 'application/json',
-        'x-api-key': 'null'
+        // 'x-api-key': 'null'
       }
 
       axios.post('https://api.shipday.com/orders', postData, {
