@@ -35,13 +35,13 @@
             <br>
 
             <label for="delivery-date">Delivery date:</label>
-            <input type="text" class="form-control m-2 mb-3" id="delivery-date" v-model="info.deliveryDate">
+            <input type="date" class="form-control m-2 mb-3" id="delivery-date" v-model="info.deliveryDate">
             
-            <label for="pickup-time">Pickup time:</label>
-            <input type="text" class="form-control m-2 mb-3" id="pickup-time" v-model="info.pickupTime">
+            <label for="pickup-time">Requested delivery time:</label>
+            <input type="time" class="form-control m-2 mb-3" id="pickup-time" v-model="info.pickupTime">
 
-            <label for="expected-pickup-time">Desired pickup time:</label>
-            <input type="text" class="form-control m-2 mb-3" id="expected-pickup-time" v-model="info.expectedPickup">
+            <label for="expected-pickup-time">Requested pickup time:</label>
+            <input type="time" class="form-control m-2 mb-3" id="expected-pickup-time" v-model="info.expectedPickup">
 
             
             <label for="amount">Amount:</label>
@@ -108,9 +108,8 @@
             address: '',
             phone: '',
           },
-          deliveryDate: '',
-          pickupTime: '',
-          deliveryTime: '',
+          deliveryDate: null,
+          pickupTime: null,
           totalValue: null,
           paid: false,
           remarks: '',
@@ -126,8 +125,10 @@
         let restaurantPhone = sections[0].substring(sections[0].indexOf('Tel.:') + 6);
         restaurantPhone = restaurantPhone.substring(0, restaurantPhone.indexOf('\n'));
         const reference = sections[0].split('\n')[3];
-        const deliveryDateTime = sections[0].split('\n')[4];
-        const deliveryDate = deliveryDateTime.split(' ')[0].replaceAll('/', '-');
+        const deliveryRegex = /20\d{2}\/\d{2}\/\d{2}/;
+        const deliveryMatch = info.match(deliveryRegex);
+
+        const deliveryDate = deliveryMatch ? deliveryMatch[0].replaceAll('/', '-') : null;
         // const issueTime = `${deliveryDateTime.split(' ')[1]}:00`;
         const totalValue = sections[3].replace('Gesamt ', '').replaceAll('\n', '').replaceAll('EUR', '');
         let remarks = '';
@@ -136,17 +137,32 @@
           remarks = remarks.substring(0, remarks.indexOf('__')).trim().replaceAll('\n', ' ');
         }
         const guestSection = sections[1].trim().split('\n');
-        const guestName = guestSection[guestSection.length - 4];
-        const guestAddress = `${guestSection[guestSection.length - 3]}, ${guestSection[guestSection.length - 2]}`;
-        const guestPhone = guestSection[guestSection.length - 1].replace('Tel.:', '');
+        const firmaIndex = info.includes('Firma') ? 1 : 0;
+        const guestName = guestSection[guestSection.length - 4 - firmaIndex];
+        const guestAddress = `${guestSection[guestSection.length - 3 - firmaIndex]}, ${guestSection[guestSection.length - 2 - firmaIndex]}`;
+        const guestPhone = guestSection[guestSection.length - 1 - firmaIndex].replace('Tel.:', '');
 
         const pickupRegex = /Bestätigte Uhrzeit\W*(\d{2}:\d{2})/;
         const pickupMatch = info.match(pickupRegex);
-        const pickupTime = pickupMatch ? `${pickupMatch[1]}:00` : '';
+        const pickupTime = pickupMatch ? pickupMatch[1] : null;
 
         const expectedPickupRegex = /Gewünschte \w+\W*(\d{2}:\d{2})/;
         const expectedPickupMatch = info.match(expectedPickupRegex);
-        const expectedPickup = expectedPickupMatch ? `${expectedPickupMatch[1]}:00` : '';
+        let expectedPickup = null; //expectedPickupMatch ? `${expectedPickupMatch[1]}:00` : '';
+        
+        if (expectedPickupMatch) {
+          const pickup = new Date();
+          const pickupParts = expectedPickup.split(':');
+          pickup.setHours(pickupParts[0]);
+          pickup.setMinutes(pickupParts[1]);
+          const strDate = pickup.toString().split(' ')[4].split(':');
+          expectedPickup = `${strDate[0]}:${strDate[1]}`;
+        } else {
+          const d = new Date();
+          d.setMinutes(d.getMinutes() + 20);
+          const strDate = d.toString().split(' ')[4].split(':');
+          expectedPickup = `${strDate[0]}:${strDate[1]}`;
+        }
 
         this.info.restaurant.name = restaurantName;
         this.info.restaurant.address = restaurantAddress;
@@ -173,11 +189,11 @@
         const orderInfoRequest = new OrderInfoRequest(
           this.info.reference,
           this.info.guest.name,
-          this.info.guest.address,
+          `${this.info.guest.address}, Austria`,
           "no mail",
           this.info.guest.phone,
           this.info.restaurant.name,
-          this.info.restaurant.address,
+          `${this.info.restaurant.address}, Austria`,
         );
 
         orderInfoRequest.setRestaurantPhoneNumber(this.info.restaurant.phone);
@@ -201,7 +217,6 @@
         // orderInfoRequest.setClientRestaurantId(12);
 
         const paymentOption = this.info.paid ? PaymentMethod.CREDIT_CARD : PaymentMethod.CASH;
-        // const paymentOption2 = PaymentMethod.CASH;
         // const cardType = CardType.AMEX;
 
         orderInfoRequest.setPaymentMethod(paymentOption);
@@ -211,38 +226,14 @@
           .then((res) => {
             console.log(res);
             this.loading = false;
+            this.extractedText = '';
           })
           .catch((e) => {
             console.log(e);
             this.loading = false;
           });
-        // shipdayClient.orderService.insertOrder(newRequest).then((r) => {
-        //   console.log(r);
-        // });
+        
       },
-      // previewPdf(event) {
-      //   const pdfFile = event.target.files[0];
-      //   if (pdfFile) {
-      //     const reader = new FileReader();
-      //     reader.onload = (e) => {
-      //       this.$refs.pdfPreview.src = e.target.result;
-      //     };
-      //     reader.readAsDataURL(pdfFile);
-      //   }
-      // },
-      // loadPdf() {
-      //   try {
-      //     const pdfDoc = PDFJSLib.getDocument(this.pdfUrl).then(() => {
-      //       const firstPage = pdfDoc.getPage(1).then(() => {
-      //         const textContent = firstPage.getTextContent().then(() => {
-      //           this.extractedText = textContent.items.map((item) => item.str).join('\n');
-      //         });
-      //       });
-      //     });
-      //   } catch (error) {
-      //     console.error('Error loading PDF:', error);
-      //   }
-      // },
       parseTime(inputTime) {
       const d = new Date();
       const timeParts = inputTime.split(':');
