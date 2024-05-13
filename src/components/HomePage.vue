@@ -1,7 +1,6 @@
 <template>
   <main>
     <h1>Clown Fish</h1>
-    <h2>{{ getRestaurants }}</h2>
     <input type="file" @change="handleFileSelect" accept=".txt" hidden ref="fileInput"/>
     <div class="row">
       <div class="col-xl-6 col-lg-6 col-md-10 col-sm-11 col-xs-12">
@@ -18,43 +17,43 @@
             </option>
           </select>
           <div class="form-group mb-4">
-            <label for="order-no">Order No.</label>
-            <input type="text" class="form-control m-2 mb-3" id="order-no" v-model="info.reference">
+              <label for="order-no">Order No.</label>
+              <input type="text" class="form-control m-2 mb-3" id="order-no" v-model="info.reference">
 
-            <label for="guest-name">Customer Name:</label>
-            <input type="text" class="form-control m-2 mb-3" id="guest-name" v-model="info.guest.name">
+              <label for="guest-name">Customer Name:</label>
+              <input type="text" class="form-control m-2 mb-3" id="guest-name" v-model="info.guest.name">
 
-            <label for="guest-address">Customer Address:</label>
-            <input type="text" class="form-control m-2 mb-3" id="guest-address" v-model="info.guest.address">
+              <label for="guest-address">Customer Address:</label>
+              <input type="text" class="form-control m-2 mb-3" id="guest-address" v-model="info.guest.address">
 
-            <label for="guest-phone">Customer phone:</label>
-            <input type="text" class="form-control m-2 mb-3" id="guest-phone" v-model="info.guest.phone">
-
-            <br>
-
-            <label for="delivery-date">Delivery date:</label>
-            <input type="date" class="form-control m-2 mb-3" id="delivery-date" v-model="info.deliveryDate">
-            
-            <label for="pickup-time">Requested delivery time:</label>
-            <input type="time" class="form-control m-2 mb-3" id="pickup-time" v-model="info.pickupTime">
-
-            <label for="expected-pickup-time">Requested pickup time:</label>
-            <input type="time" class="form-control m-2 mb-3" id="expected-pickup-time" v-model="info.expectedPickup">
-
-            
-            <label for="amount">Amount:</label>
-            <input type="number" class="form-control m-2 mb-3" id="amount" v-model="info.totalValue">
-
-            <label for="paid">Paid:</label>
-            <select class="form-control m-2 mb-3" id="paid" v-model="info.paid">
-              <option :value="true">Yes</option>
-              <option :value="false">No</option>
-            </select>
-
-            <label for="remarks">Remarks:</label>
-            <textarea class="form-control m-2 mb-3" id="remarks" v-model="info.remarks" />
+              <label for="guest-phone">Customer phone:</label>
+              <input type="text" class="form-control m-2 mb-3" id="guest-phone" v-model="info.guest.phone">
+            </div>
+            <div class="form-group mb-4 row">
+              <div class="col-6">
+                <label for="pickup-time">Req. delivery time:</label>
+                <input type="time" class="form-control m-2 mb-3" id="pickup-time" v-model="info.pickupTime">
+              </div>
+              <div class="col-6">
+                <label for="expected-pickup-time">Req. pickup time:</label>
+                <input type="time" class="form-control m-2 mb-3" id="expected-pickup-time" v-model="info.expectedPickup">
+              </div>
+            </div>
+            <div class="form-group mb-4 row">
+              <div class="col-8">
+                <label for="amount">Amount:</label>
+                <input type="number" class="form-control m-2 mb-3" id="amount" v-model="info.totalValue">
+              </div>
+              <div class="col-4">
+                <label for="paid">Paid:</label>
+                <select class="form-control m-2 mb-3" id="paid" v-model="info.paid">
+                  <option :value="true">Yes</option>
+                  <option :value="false">No</option>
+                </select>
+              </div>
           </div>
-
+          <label for="remarks">Remarks:</label>
+          <textarea class="form-control m-2 mb-3" id="remarks" v-model="info.remarks" />
           <button class="btn btn-success" type="submit" :disabled="loading" @click="sendRequest">
             Send Request <span v-if="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span class="visually-hidden">Loading...</span>
@@ -110,7 +109,6 @@
             address: '',
             phone: '',
           },
-          deliveryDate: null,
           pickupTime: null,
           totalValue: null,
           paid: false,
@@ -176,8 +174,6 @@
         const deliveryRegex = /20\d{2}\/\d{2}\/\d{2}/;
         const deliveryMatch = info.match(deliveryRegex);
 
-        const deliveryDate = deliveryMatch ? deliveryMatch[0].replaceAll('/', '-') : null;
-        // const issueTime = `${deliveryDateTime.split(' ')[1]}:00`;
         const totalValue = sections[3].replace('Gesamt ', '').replaceAll('\n', '').replaceAll('EUR', '');
         let remarks = '';
         if (info.includes('Anmerkungen')) {
@@ -212,7 +208,6 @@
           expectedPickup = `${strDate[0]}:${strDate[1]}`;
         }
         this.info.reference = reference;
-        this.info.deliveryDate = deliveryDate;
         this.info.pickupTime = pickupTime;
         this.info.expectedPickup = expectedPickup;
         this.info.totalValue = parseFloat(totalValue);
@@ -225,8 +220,9 @@
       sendRequest() {
         this.loading = true;
         // my token
-        const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
-        // const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
+        // const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
+        // const shipdayClient = new Shipday('dGnbvDVee8.oIKyoT7akhauwwA5j1fN', 10000);
+        const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
         
         shipdayClient.carrierService.getCarriers().then(r => console.log(r[0]));
         
@@ -241,7 +237,8 @@
         );
 
         orderInfoRequest.setRestaurantPhoneNumber(this.restaurantInfo.phone);
-        orderInfoRequest.setExpectedDeliveryDate(this.info.deliveryDate);
+        const deliveryDate = new Date().toISOString().split('T')[0]
+        orderInfoRequest.setExpectedDeliveryDate(deliveryDate);
         if (this.info.pickupTime !== '') {
           orderInfoRequest.setExpectedDeliveryTime(this.parseTime(this.info.pickupTime));
         }
@@ -309,9 +306,9 @@
     width: 100%;
     min-height: 100vh;
   }
-  .row {
+  /* .row {
     min-height: 100vh;
-  }
+  } */
   body > div {
     width: 48%;
     height: 100%;
