@@ -1,6 +1,8 @@
 <template>
   <main>
-    <h1>Shipping Loader</h1>
+    <h1>Clown Fish</h1>
+    <h2>{{ getRestaurants }}</h2>
+    <input type="file" @change="handleFileSelect" accept=".txt" hidden ref="fileInput"/>
     <div class="row">
       <div class="col-xl-6 col-lg-6 col-md-10 col-sm-11 col-xs-12">
         <textarea cols="30" rows="10" v-model="extractedText" class="form-control mt-3"></textarea>
@@ -8,6 +10,13 @@
       </div>
       <div class="col-xl-6 col-lg-6 col-md-10 col-sm-11 col-xs-12">
         <form class="form p-4 m-3">
+          <button @click="loadRestaurants" class="btn btn-success" type="button">&#11014;</button>
+          <select class="form-control m-2 mb-3" v-model="selectedRestaurant">
+            <option value="">--Select--</option>
+            <option v-for="(i, index) in restaurantOptions" :key="index" :value="i.restaurant">
+              {{ i.restaurant }}
+            </option>
+          </select>
           <div class="form-group mb-4">
             <label for="order-no">Order No.</label>
             <input type="text" class="form-control m-2 mb-3" id="order-no" v-model="info.reference">
@@ -20,17 +29,6 @@
 
             <label for="guest-phone">Customer phone:</label>
             <input type="text" class="form-control m-2 mb-3" id="guest-phone" v-model="info.guest.phone">
-
-            <br>
-
-            <label for="restaurant-name">Restaurant Name:</label>
-            <input type="text" class="form-control m-2 mb-3" id="restaurant-name" v-model="info.restaurant.name">
-
-            <label for="restaurant-address">Restaurant Address:</label>
-            <input type="text" class="form-control m-2 mb-3" id="restaurant-address" v-model="info.restaurant.address">
-
-            <label for="restaurant-phone">Restaurant phone:</label>
-            <input type="text" class="form-control m-2 mb-3" id="restaurant-phone" v-model="info.restaurant.phone">
 
             <br>
 
@@ -69,20 +67,23 @@
 
 
 <script>
-  // import PDFJSLib from 'pdfjs-dist';
-  // import { useOrderStore } from '../stores/orders';
+
+  import { useStore } from '../stores/store';
+  import { defineComponent } from 'vue';
+
   import Shipday from 'shipday/integration';
   import OrderInfoRequest from 'shipday/integration/order/request/order.info.request';
   import PaymentMethod from 'shipday/integration/order/types/payment.method';
   // import CardType from 'shipday/integration/order/types/card.type';
   // import OrderItem from 'shipday/integration/order/request/order.item';
-  //import pdfjsLib from 'pdfjs-dist';
+
 
 
   export default {
     setup() {
-      // const orderStore = useOrderStore();
-      // const getSkills = orderStore.getSkills;
+      const store = useStore();
+      const getRestaurants = store.getRestaurants;
+      const parseRestaurants = () => store.parseRestaurants();
       // const testSkills = () => orderStore.testSkills();
       // const fetchUsers = () => orderStore.fetchUsers();
 
@@ -91,19 +92,20 @@
       //   testSkills,
       //   fetchUsers,
       // };
+      return {
+        getRestaurants,
+        parseRestaurants,
+      };
     },
     data() {
       return {
         loading: false,
+        restaurantOptions: [],
+        selectedRestaurant: '',
         extractedText: '',
         info: {
           reference: '',
           guest: {
-            name: '',
-            address: '',
-            phone: '',
-          },
-          restaurant: {
             name: '',
             address: '',
             phone: '',
@@ -116,14 +118,60 @@
         },
       };
     },
+    computed: {
+      restaurantInfo() {
+        if (this.selectedRestaurant === '') return '';
+        return this.restaurantOptions.filter((o) => o.restaurant === this.selectedRestaurant)[0];
+      },
+    },
+    mounted() {
+      this.parseRestaurantOptions();
+    },
     methods: {
+      parseRestaurantOptions() {
+        const options = localStorage.getItem('restaurants');
+        this.restaurantOptions = JSON.parse(options) || [];
+      },
+      loadRestaurants() {
+        const { fileInput } = this.$refs;
+        fileInput.click();
+      },
+      handleFileSelect(event) {
+        const file = event.target.files[0];
+        this.readFile(file);
+      },
+      async readFile(file) {
+        try {
+          const text = await this.readFileAsync(file);
+          const lines = text.split('\n').filter((l) => l !== '');
+          console.log(lines);
+          // Do something with the lines
+          // localStorage.removeItem('restaurants');
+          const newRestaurants = lines.map((r) => ({
+            restaurant: r.split(';')[0],
+            phone: r.split(';')[1],
+            address: r.split(';')[2],
+          }));
+          console.log(newRestaurants);
+          localStorage.setItem('restaurants', JSON.stringify(newRestaurants));
+          this.parseRestaurantOptions();
+        } catch (error) {
+          console.error('Error reading the file:', error);
+        }
+      },
+      readFileAsync(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve(reader.result);
+          };
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      },
       parseInfo() {
         const info = this.extractedText.trim();
-        const restaurantName = info.substring(0, info.indexOf(',')).trim();
-        const restaurantAddress = info.substring(info.indexOf(',') + 1, info.indexOf(', Tel')).trim().replaceAll('\n', ', ').replaceAll(',,', ',');
         const sections = info.split('_______________________________');
-        let restaurantPhone = sections[0].substring(sections[0].indexOf('Tel.:') + 6);
-        restaurantPhone = restaurantPhone.substring(0, restaurantPhone.indexOf('\n'));
         const reference = sections[0].split('\n')[3];
         const deliveryRegex = /20\d{2}\/\d{2}\/\d{2}/;
         const deliveryMatch = info.match(deliveryRegex);
@@ -163,10 +211,6 @@
           const strDate = d.toString().split(' ')[4].split(':');
           expectedPickup = `${strDate[0]}:${strDate[1]}`;
         }
-
-        this.info.restaurant.name = restaurantName;
-        this.info.restaurant.address = restaurantAddress;
-        this.info.restaurant.phone = restaurantPhone;
         this.info.reference = reference;
         this.info.deliveryDate = deliveryDate;
         this.info.pickupTime = pickupTime;
@@ -181,8 +225,8 @@
       sendRequest() {
         this.loading = true;
         // my token
-        // const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
-        const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
+        const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
+        // const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
         
         shipdayClient.carrierService.getCarriers().then(r => console.log(r[0]));
         
@@ -192,11 +236,11 @@
           `${this.info.guest.address}, Austria`,
           "no mail",
           this.info.guest.phone,
-          this.info.restaurant.name,
-          `${this.info.restaurant.address}, Austria`,
+          this.restaurantInfo.restaurant,
+          `${this.restaurantInfo.address}, Austria`,
         );
 
-        orderInfoRequest.setRestaurantPhoneNumber(this.info.restaurant.phone);
+        orderInfoRequest.setRestaurantPhoneNumber(this.restaurantInfo.phone);
         orderInfoRequest.setExpectedDeliveryDate(this.info.deliveryDate);
         if (this.info.pickupTime !== '') {
           orderInfoRequest.setExpectedDeliveryTime(this.parseTime(this.info.pickupTime));
