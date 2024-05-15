@@ -110,6 +110,7 @@
             phone: '',
           },
           pickupTime: null,
+          expectedPickup: null,
           totalValue: null,
           paid: false,
           remarks: '',
@@ -167,7 +168,7 @@
           reader.readAsText(file);
         });
       },
-      parseInfo() {
+      parsePdf() {
         const info = this.extractedText.trim();
         const sections = info.split('_______________________________');
         const reference = sections[0].split('\n')[3];
@@ -198,7 +199,7 @@
           const pickup = new Date();
           const pickupParts = expectedPickup.split(':');
           pickup.setHours(pickupParts[0]);
-          pickup.setMinutes(pickupParts[1]);
+          pickup.setMinutes(pickupParts[1] - 20);
           const strDate = pickup.toString().split(' ')[4].split(':');
           expectedPickup = `${strDate[0]}:${strDate[1]}`;
         } else {
@@ -217,11 +218,119 @@
         this.info.guest.address = guestAddress;
         this.info.guest.phone = guestPhone;
       },
+      parseFodora() {
+        const info = this.extractedText.trim();
+        const referenceRegex = /foodora.+/;
+        const referenceMatch = info.match(referenceRegex);
+        this.info.reference = referenceMatch[0];
+
+        const nameRegex = /Kunde:(\W.+)/;
+        const nameMatch = info.match(nameRegex);
+        this.info.guest.name = nameMatch[1];
+
+        const phoneRegex = /\+4\d+/;
+        const phoneMatch = info.match(phoneRegex);
+        this.info.guest.phone = phoneMatch[0];
+
+        let address = info.split('Adresse:')[1];
+        address = address.split('Schon')[0];
+        address = address.split('Bar')[0];
+        this.info.guest.address = address.trim();
+
+        const pickupRegex = /Lieferzeit\W(\d{2}:\d{2})/;
+        const pickupMatch = info.match(pickupRegex);
+        const pickupTime = pickupMatch ? pickupMatch[1] : null;
+        this.info.pickupTime = pickupTime;
+
+        if (pickupMatch) {
+          const pickup = new Date();
+          const pickupParts = pickupTime.split(':');
+          pickup.setHours(pickupParts[0]);
+          pickup.setMinutes(pickupParts[1] - 20);
+          const strDate = pickup.toString().split(' ')[4].split(':');
+          this.info.expectedPickup = `${strDate[0]}:${strDate[1]}`;
+        } else {
+          const d = new Date();
+          d.setMinutes(d.getMinutes() + 20);
+          const strDate = d.toString().split(' ')[4].split(':');
+          this.info.expectedPickup = `${strDate[0]}:${strDate[1]}`;
+        }
+
+        const totalRegex = /Summe\W€ (\d+,\d+)/;
+        const totalMatch = info.match(totalRegex);
+        this.info.totalValue = parseFloat(totalMatch[1].replace(',', '.'));
+        this.info.paid = info.toLowerCase().includes('schon bezahlt'); 
+        // this.info.reference = referenceMatch[0];
+        // const deliveryMatch = info.match(deliveryRegex);
+        // const sections = info.split('_______________________________');
+        // const reference = sections[0].split('\n')[3];
+        // const deliveryRegex = /20\d{2}\/\d{2}\/\d{2}/;
+        // const deliveryMatch = info.match(deliveryRegex);
+
+        // const totalValue = sections[3].replace('Gesamt ', '').replaceAll('\n', '').replaceAll('EUR', '');
+        // let remarks = '';
+        // if (info.includes('Anmerkungen')) {
+        //   remarks = info.substring(info.indexOf('Anmerkungen:') + 12);
+        //   remarks = remarks.substring(0, remarks.indexOf('__')).trim().replaceAll('\n', ' ');
+        // }
+        // const guestSection = sections[1].trim().split('\n');
+        // const firmaIndex = info.includes('Firma') ? 1 : 0;
+        // const guestName = guestSection[guestSection.length - 4 - firmaIndex];
+        // const guestAddress = `${guestSection[guestSection.length - 3 - firmaIndex]}, ${guestSection[guestSection.length - 2 - firmaIndex]}`;
+        // const guestPhone = guestSection[guestSection.length - 1 - firmaIndex].replace('Tel.:', '');
+
+        // const pickupRegex = /Bestätigte Uhrzeit\W*(\d{2}:\d{2})/;
+        // const pickupMatch = info.match(pickupRegex);
+        // const pickupTime = pickupMatch ? pickupMatch[1] : null;
+
+        // const expectedPickupRegex = /Gewünschte \w+\W*(\d{2}:\d{2})/;
+        // const expectedPickupMatch = info.match(expectedPickupRegex);
+        // let expectedPickup = null; //expectedPickupMatch ? `${expectedPickupMatch[1]}:00` : '';
+        
+        // if (expectedPickupMatch) {
+        //   const pickup = new Date();
+        //   const pickupParts = expectedPickup.split(':');
+        //   pickup.setHours(pickupParts[0]);
+        //   pickup.setMinutes(pickupParts[1] - 20);
+        //   const strDate = pickup.toString().split(' ')[4].split(':');
+        //   expectedPickup = `${strDate[0]}:${strDate[1]}`;
+        // } else {
+        //   const d = new Date();
+        //   d.setMinutes(d.getMinutes() + 20);
+        //   const strDate = d.toString().split(' ')[4].split(':');
+        //   expectedPickup = `${strDate[0]}:${strDate[1]}`;
+        // }
+        // this.info.reference = reference;
+        // this.info.pickupTime = pickupTime;
+        // this.info.expectedPickup = expectedPickup;
+        // this.info.totalValue = parseFloat(totalValue);
+        // this.info.paid = info.includes('Payment Online');
+        // this.info.remarks = remarks;
+        // this.info.guest.name = guestName;
+        // this.info.guest.address = guestAddress;
+        // this.info.guest.phone = guestPhone;
+      },
+      parseInfo() {
+        if (this.extractedText.toString().toLowerCase().includes('foodora')) {
+          this.parseFodora();
+        } else {
+          this.parsePdf();
+        }
+        this.selectRestaurant();
+      },
+      selectRestaurant() {
+        this.restaurantOptions.forEach((r) => {
+          if (this.extractedText.toLowerCase().includes(r.restaurant.toLowerCase())) {
+            this.selectedRestaurant = r.restaurant;
+          }
+        });
+      },
       sendRequest() {
         this.loading = true;
         // my token
-        // const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
+        //const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
         // const shipdayClient = new Shipday('dGnbvDVee8.oIKyoT7akhauwwA5j1fN', 10000);
+        
         const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
         
         shipdayClient.carrierService.getCarriers().then(r => console.log(r[0]));
@@ -252,7 +361,9 @@
         // orderInfoRequest.setDiscountAmount(0);
         // orderInfoRequest.setDeliveryFee(0);
         orderInfoRequest.setTotalOrderCost(this.info.totalValue);
-        if (this.info.remarks !== '') orderInfoRequest.setDeliveryInstruction(this.info.remarks);
+        let remarks = this.info.remarks || '';
+        if (this.info.paid) remarks = `Achtung ‼️ Bargeld\n${remarks}`;
+        if (this.info.remarks !== '') orderInfoRequest.setDeliveryInstruction(remarks);
         orderInfoRequest.setOrderSource("Seamless");
         // orderInfoRequest.setAdditionalId("4532");
         // orderInfoRequest.setClientRestaurantId(12);
