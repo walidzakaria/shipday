@@ -148,8 +148,9 @@
           // localStorage.removeItem('restaurants');
           const newRestaurants = lines.map((r) => ({
             restaurant: r.split(';')[0],
-            phone: r.split(';')[1],
-            address: r.split(';')[2],
+            type: r.split(';')[1],
+            phone: r.split(';')[2],
+            address: r.split(';')[3],
           }));
           console.log(newRestaurants);
           localStorage.setItem('restaurants', JSON.stringify(newRestaurants));
@@ -218,24 +219,40 @@
         this.info.guest.address = guestAddress;
         this.info.guest.phone = guestPhone;
       },
-      parseFodora() {
+      parseFoodora() {
         const info = this.extractedText.trim();
         const referenceRegex = /foodora.+/;
-        const referenceMatch = info.match(referenceRegex);
+        const referenceMatch = info.toLowerCase().match(referenceRegex);
         this.info.reference = referenceMatch[0];
 
         const nameRegex = /Kunde:(\W.+)/;
         const nameMatch = info.match(nameRegex);
         this.info.guest.name = nameMatch[1];
 
-        const phoneRegex = /\+4\d+/;
+        const phoneRegex = /\+\d+/;
         const phoneMatch = info.match(phoneRegex);
         this.info.guest.phone = phoneMatch[0];
 
         let address = info.split('Adresse:')[1];
         address = address.split('Schon')[0];
         address = address.split('Bar')[0];
-        this.info.guest.address = address.trim();
+        address = address.replace('llnz,', 'linz');
+        address = address.replace('LInz,', 'Linz');
+        if (address.toLowerCase().includes('linz')) {
+          console.log('split by linz');
+          this.info.guest.address = `${address.split('Linz')[0]}Linz`;
+          this.info.remarks = address.split('Linz')[1];
+        } else {
+          const zipCodeRegex = /\d{4}/;
+          const zipCodeMatch = address.match(zipCodeRegex);
+          console.log(zipCodeMatch);
+          if (zipCodeMatch) {
+            const splitCode = zipCodeMatch[0];
+            this.info.guest.address = `${address.split(splitCode)[0]}${splitCode}`;
+            this.info.remarks = address.split(splitCode)[1];
+          }
+          
+        }
 
         const pickupRegex = /Lieferzeit\W(\d{2}:\d{2})/;
         const pickupMatch = info.match(pickupRegex);
@@ -256,9 +273,18 @@
           this.info.expectedPickup = `${strDate[0]}:${strDate[1]}`;
         }
 
-        const totalRegex = /Summe\W€ (\d+,\d+)/;
-        const totalMatch = info.match(totalRegex);
-        this.info.totalValue = parseFloat(totalMatch[1].replace(',', '.'));
+        const totalRegex = /€\W(\d+,\d{2})/g;
+        const totalMatch = info.matchAll(totalRegex);
+        console.log('total', totalMatch);
+        const matchAll = Array.from(totalMatch);
+        console.log('matchAll', matchAll);
+        let totalAmount = 0;
+        matchAll.forEach((m) => {
+          const matchValue = parseFloat(m[0].substring(2).replace(',', '.'));
+          if (matchValue > totalAmount) totalAmount = matchValue;
+        });
+
+        this.info.totalValue = totalAmount
         this.info.paid = info.toLowerCase().includes('schon bezahlt'); 
         // this.info.reference = referenceMatch[0];
         // const deliveryMatch = info.match(deliveryRegex);
@@ -311,8 +337,21 @@
         // this.info.guest.phone = guestPhone;
       },
       parseInfo() {
+        this.info = {
+          reference: '',
+          guest: {
+            name: '',
+            address: '',
+            phone: '',
+          },
+          pickupTime: null,
+          expectedPickup: null,
+          totalValue: null,
+          paid: false,
+          remarks: '',
+        };
         if (this.extractedText.toString().toLowerCase().includes('foodora')) {
-          this.parseFodora();
+          this.parseFoodora();
         } else {
           this.parsePdf();
         }
@@ -328,25 +367,25 @@
       sendRequest() {
         this.loading = true;
         // my token
-        //const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
+        const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
         // const shipdayClient = new Shipday('dGnbvDVee8.oIKyoT7akhauwwA5j1fN', 10000);
         
-        const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
+        //const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
         
         shipdayClient.carrierService.getCarriers().then(r => console.log(r[0]));
-        
+        const restaurantName = `${this.restaurantInfo.type} - ${this.restaurantInfo.restaurant}`;
         const orderInfoRequest = new OrderInfoRequest(
           this.info.reference,
           this.info.guest.name,
           `${this.info.guest.address}, Austria`,
           "no mail",
           this.info.guest.phone,
-          this.restaurantInfo.restaurant,
+          restaurantName,
           `${this.restaurantInfo.address}, Austria`,
         );
 
         orderInfoRequest.setRestaurantPhoneNumber(this.restaurantInfo.phone);
-        const deliveryDate = new Date().toISOString().split('T')[0]
+        const deliveryDate = new Date().toUTCString().split('T')[0];
         orderInfoRequest.setExpectedDeliveryDate(deliveryDate);
         if (this.info.pickupTime !== '') {
           orderInfoRequest.setExpectedDeliveryTime(this.parseTime(this.info.pickupTime));
