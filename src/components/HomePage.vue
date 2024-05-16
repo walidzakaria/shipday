@@ -367,10 +367,10 @@
       sendRequest() {
         this.loading = true;
         // my token
-        const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
+        //const shipdayClient = new Shipday('6qyxRrWNFI.gilb3OXDv8gUAfGpaVF9', 10000);
         // const shipdayClient = new Shipday('dGnbvDVee8.oIKyoT7akhauwwA5j1fN', 10000);
         
-        //const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
+        const shipdayClient = new Shipday('L4bQFSIvBZ.8Ye6y6plnJ1nlYdke2ap', 10000);
         
         shipdayClient.carrierService.getCarriers().then(r => console.log(r[0]));
         const restaurantName = `${this.restaurantInfo.type} - ${this.restaurantInfo.restaurant}`;
