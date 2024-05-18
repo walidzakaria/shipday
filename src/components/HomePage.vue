@@ -4,8 +4,9 @@
     <input type="file" @change="handleFileSelect" accept=".txt" hidden ref="fileInput"/>
     <div class="row">
       <div class="col-xl-6 col-lg-6 col-md-10 col-sm-11 col-xs-12">
-        <textarea cols="30" rows="10" v-model="extractedText" class="form-control mt-3"></textarea>
-        <button class="btn btn-success mt-2" @click="parseInfo">Extract Info</button>
+        <textarea cols="30" rows="10" v-model="extractedText" class="form-control mt-3" ref="extractedText"></textarea>
+        <button class="btn btn-success mt-2 mr-2" @click="parseInfo">Extract Info</button>
+        <button class="btn btn-warning mt-2 ml-2" @click="reset">Reset</button>
       </div>
       <div class="col-xl-6 col-lg-6 col-md-10 col-sm-11 col-xs-12">
         <form class="form p-4 m-3">
@@ -127,6 +128,24 @@
       this.parseRestaurantOptions();
     },
     methods: {
+      reset() {
+        this.info = {
+          reference: '',
+          guest: {
+            name: '',
+            address: '',
+            phone: '',
+          },
+          pickupTime: null,
+          expectedPickup: null,
+          totalValue: null,
+          paid: false,
+          remarks: '',
+        };
+        this.extractedText = '';
+        const textAreaInput = this.$refs.extractedText;
+        textAreaInput.focus();
+      },
       parseRestaurantOptions() {
         const options = localStorage.getItem('restaurants');
         this.restaurantOptions = JSON.parse(options) || [];
@@ -289,12 +308,10 @@
       },
       parseVenezia() {
         const info = this.extractedText.trim();
-        const referenceRegex = /.+-.+-.+/;
+        const referenceRegex = /\w{4}-\w{4}-\w{4}/;
         const referenceMatch = info.match(referenceRegex);
-
-        const refCompanyRegex = /Ben\w+:?\W?:?\w+\W(\w+)/;
-        const refCompanyMatch = info.match(refCompanyRegex);
-        this.info.reference = `${refCompanyMatch[1]} #${referenceMatch[0]}`;
+        const lines = info.split('\n');
+        this.info.reference = `${lines[lines.length - 1]} #${referenceMatch[0]}`;
 
         const nameRegex = /Name\W?:\W?(.+)/;
         const nameMatch = info.match(nameRegex);
@@ -308,6 +325,13 @@
         address = address.split('Lieferzeit')[0].trim();
         address = address.replace('llnz,', 'linz');
         address = address.replace('LInz,', 'Linz');
+        
+        const extraDetailsRegex = /-\/\d+\/\d+/;
+        const extraDetailsMatch = address.match(extraDetailsRegex);
+        if (extraDetailsMatch) {
+          address = address.replace(extraDetailsMatch[0], ' ');
+          this.info.remarks = extraDetailsMatch[0] + '\n';
+        }
         this.info.guest.address = address;
 
         const pickupRegex = /Lieferzeit\W?:\W?(\d{2}:\d{2})/;
@@ -330,7 +354,7 @@
         }
         let remarks = info.split('Bemerkung:')[1];
         remarks = remarks.split('Rechnungsnummer')[0].trim();
-        this.info.remarks = remarks;
+        this.info.remarks += remarks;
         const totalRegex = /Gesamt\W?:\W?(\d+,\d{2})/;
         const totalMatch = info.match(totalRegex);
         this.info.totalValue = parseFloat(totalMatch[1].replace(',', '.'));
@@ -338,6 +362,14 @@
         
       },
       parseInfo() {
+        try {
+          const decodedText = decodeURIComponent(this.extractedText);
+          this.extractedText = decodedText;
+          console.log('text was decoded');
+        } catch (error) {
+          console.log('text is not encoded');
+        }
+        
         this.info = {
           reference: '',
           guest: {
@@ -404,7 +436,7 @@
           // orderInfoRequest.setDeliveryFee(0);
           orderInfoRequest.setTotalOrderCost(this.info.totalValue);
           let remarks = this.info.remarks || '';
-          if (this.info.paid) remarks = `Achtung ‼️ Bargeld\n${remarks}`;
+          if (!this.info.paid) remarks = `Achtung ‼️ Bargeld\n${remarks}`;
           if (this.info.remarks !== '') orderInfoRequest.setDeliveryInstruction(remarks);
           orderInfoRequest.setOrderSource("Seamless");
           // orderInfoRequest.setAdditionalId("4532");
