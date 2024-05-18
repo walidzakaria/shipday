@@ -437,7 +437,7 @@
           orderInfoRequest.setTotalOrderCost(this.info.totalValue);
           let remarks = this.info.remarks || '';
           if (!this.info.paid) remarks = `Achtung ‼️ Bargeld\n${remarks}`;
-          if (this.info.remarks !== '') orderInfoRequest.setDeliveryInstruction(remarks);
+          if (remarks !== '') orderInfoRequest.setDeliveryInstruction(remarks);
           orderInfoRequest.setOrderSource("Seamless");
           // orderInfoRequest.setAdditionalId("4532");
           // orderInfoRequest.setClientRestaurantId(12);
