@@ -385,7 +385,7 @@
         );
 
         orderInfoRequest.setRestaurantPhoneNumber(this.restaurantInfo.phone);
-        const deliveryDate = new Date().toUTCString().split('T')[0];
+        const deliveryDate = new Date().toISOString().split('T')[0];
         orderInfoRequest.setExpectedDeliveryDate(deliveryDate);
         if (this.info.pickupTime !== '') {
           orderInfoRequest.setExpectedDeliveryTime(this.parseTime(this.info.pickupTime));
