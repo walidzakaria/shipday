@@ -321,7 +321,7 @@
         const phoneMatch = info.match(phoneRegex);
         this.info.guest.phone = phoneMatch[1];
 
-        let address = info.split('Adresse :')[1];
+        let address = info.replace('Adresse:', 'Adresse :').split('Adresse :')[1];
         address = address.split('Lieferzeit')[0].trim();
         address = address.replace('llnz,', 'linz');
         address = address.replace('LInz,', 'Linz');
